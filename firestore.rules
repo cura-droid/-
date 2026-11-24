@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidStudentCode(code) {
+      return code is string && code.size() >= 1 && code.size() <= 20;
+    }
+
+    function isValidStage(stage) {
+      return stage in ['문제 발견', '원인 분석', '해결안 탐색', '검토'];
+    }
+
+    function isValidSessionStage(stage) {
+      return stage in ['문제 발견', '원인 분석', '해결안 탐색', '검토', '최종 제출', '제출 완료'];
+    }
+
+    function isValidChatLog(data) {
+      return data.keys().hasAll(['studentCode', 'stage', 'sequence', 'question', 'aiReplySummary', 'aiReplyFull', 'createdAt']) &&
+        data.keys().hasOnly(['studentCode', 'stage', 'sequence', 'question', 'aiReplySummary', 'aiReplyFull', 'createdAt']) &&
+        isValidStudentCode(data.studentCode) &&
+        data.stage is string && data.stage.size() <= 20 && isValidStage(data.stage) &&
+        data.sequence is int && data.sequence >= 1 && data.sequence <= 1000 &&
+        data.question is string && data.question.size() >= 1 && data.question.size() <= 2000 &&
+        data.aiReplySummary is string && data.aiReplySummary.size() >= 1 && data.aiReplySummary.size() <= 100 &&
+        data.aiReplyFull is string && data.aiReplyFull.size() >= 1 && data.aiReplyFull.size() <= 3000 &&
+        data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['studentCode', 'foundProblem', 'solution', 'reflection', 'submittedAt']) &&
+        data.keys().hasOnly(['studentCode', 'foundProblem', 'solution', 'reflection', 'submittedAt']) &&
+        isValidStudentCode(data.studentCode) &&
+        data.foundProblem is string && data.foundProblem.size() >= 1 && data.foundProblem.size() <= 3000 &&
+        data.solution is string && data.solution.size() >= 1 && data.solution.size() <= 3000 &&
+        data.reflection is string && data.reflection.size() >= 1 && data.reflection.size() <= 1000 &&
+        data.submittedAt is timestamp && data.submittedAt == request.time;
+    }
+
+    function isValidStudentSession(data) {
+      return data.keys().hasAll(['studentCode', 'currentStage', 'updatedAt']) &&
+        data.keys().hasOnly(['studentCode', 'currentStage', 'updatedAt']) &&
+        isValidStudentCode(data.studentCode) &&
+        data.currentStage is string && data.currentStage.size() <= 20 && isValidSessionStage(data.currentStage) &&
+        data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /chatLogs/{logId} {
+      allow get: if isValidId(logId);
+      allow list: if true;
+      allow create: if isValidId(logId) && isValidChatLog(incoming());
+      allow delete: if isValidId(logId);
+    }
+
+    match /submissions/{submissionId} {
+      allow get: if isValidId(submissionId);
+      allow list: if true;
+      allow create: if isValidId(submissionId) && isValidSubmission(incoming());
+      allow update: if isValidId(submissionId) &&
+        isValidSubmission(incoming()) &&
+        incoming().studentCode == existing().studentCode &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['foundProblem', 'solution', 'reflection', 'submittedAt']);
+      allow delete: if isValidId(submissionId);
+    }
+
+    match /studentSessions/{sessionId} {
+      allow get: if isValidId(sessionId);
+      allow list: if true;
+      allow create: if isValidId(sessionId) && isValidStudentSession(incoming());
+      allow update: if isValidId(sessionId) &&
+        isValidStudentSession(incoming()) &&
+        incoming().studentCode == existing().studentCode &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['currentStage', 'updatedAt']);
+      allow delete: if isValidId(sessionId);
+    }
+  }
+}

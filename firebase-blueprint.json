@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "ChatLog": {
+      "title": "ChatLog",
+      "description": "A single student question and Gemini AI Socratic response summary in a problem-solving stage.",
+      "type": "object",
+      "properties": {
+        "studentCode": {
+          "type": "string",
+          "description": "Anonymous student code such as S01.",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_\\-가-힣]+$"
+        },
+        "stage": {
+          "type": "string",
+          "description": "Current problem-solving stage.",
+          "enum": ["문제 발견", "원인 분석", "해결안 탐색", "검토"]
+        },
+        "sequence": {
+          "type": "integer",
+          "description": "Sequential question number for the student."
+        },
+        "question": {
+          "type": "string",
+          "description": "Original question text written by the student.",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "aiReplySummary": {
+          "type": "string",
+          "description": "First 100 characters of the AI reply.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "aiReplyFull": {
+          "type": "string",
+          "description": "Full AI reply text for session restoration.",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the question was recorded."
+        }
+      },
+      "required": [
+        "studentCode",
+        "stage",
+        "sequence",
+        "question",
+        "aiReplySummary",
+        "aiReplyFull",
+        "createdAt"
+      ]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Final campus problem-finding assignment submission by a student.",
+      "type": "object",
+      "properties": {
+        "studentCode": {
+          "type": "string",
+          "description": "Anonymous student code such as S01.",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_\\-가-힣]+$"
+        },
+        "foundProblem": {
+          "type": "string",
+          "description": "Identified campus problem.",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "solution": {
+          "type": "string",
+          "description": "Proposed solution for the problem.",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "reflection": {
+          "type": "string",
+          "description": "One-line reflection.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "submittedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the submission was saved."
+        }
+      },
+      "required": [
+        "studentCode",
+        "foundProblem",
+        "solution",
+        "reflection",
+        "submittedAt"
+      ]
+    },
+    "StudentSession": {
+      "title": "StudentSession",
+      "description": "Tracks the active stage of a student code across app restarts.",
+      "type": "object",
+      "properties": {
+        "studentCode": {
+          "type": "string",
+          "description": "Anonymous student code such as S01.",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_\\-가-힣]+$"
+        },
+        "currentStage": {
+          "type": "string",
+          "description": "Current stage in the 4-stage workflow or submission.",
+          "enum": ["문제 발견", "원인 분석", "해결안 탐색", "검토", "최종 제출", "제출 완료"]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last stage update."
+        }
+      },
+      "required": [
+        "studentCode",
+        "currentStage",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/chatLogs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/ChatLog"
+      },
+      "description": "Collection of student questions and Gemini reply summaries across stages."
+    },
+    "/submissions/{submissionId}": {
+      "schema": {
+        "$ref": "#/entities/Submission"
+      },
+      "description": "Collection of final student assignment submissions."
+    },
+    "/studentSessions/{studentCode}": {
+      "schema": {
+        "$ref": "#/entities/StudentSession"
+      },
+      "description": "Collection storing each student's current workflow stage for persistence across reloads."
+    }
+  }
+}
